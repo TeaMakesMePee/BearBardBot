@@ -19,13 +19,13 @@ async def level_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     into_curr_level, from_next_level = stats['from_level'], stats['to_level']
     curr_level_exp = into_curr_level + from_next_level
     filled = int(10 * into_curr_level / curr_level_exp)
-    bar = '█' * filled + '░' * (10 - filled)
+    bar = '#' * filled + ' ' * (10 - filled)
 
     await update.message.reply_text(
         f"📊 *{stats['username']}*\n\n"
         f"Level: *{stats['level']}*\n"
         f"EXP: {into_curr_level}/{curr_level_exp}\n"
-        f"{bar}\n"
+        f"[{bar}]\n"
         f"Total messages: {stats['message_count']}",
         parse_mode="Markdown"
     )
