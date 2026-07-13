@@ -17,6 +17,9 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+async def error_handler(update, context):
+    logger.error(f"Update caused error: {context.error}")
+
 def main():
     logger.info("Initializing database...")
     init_db()
@@ -30,6 +33,8 @@ def main():
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
                                    handle_message))
+    
+    app.add_error_handler(error_handler)
 
     logger.info("Bot started. Press Ctrl+C to stop.")
     app.run_polling(drop_pending_updates=True)

@@ -12,7 +12,8 @@ async def level_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if stats is None:
         await update.message.reply_text(
-            "You haven't earned any EXP yet. Send some messages!"
+            "You haven't earned any EXP yet. Send some messages!",
+            do_quote=False
         )
         return
     
@@ -27,7 +28,8 @@ async def level_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"EXP: {into_curr_level}/{curr_level_exp}\n"
         f"`[{bar}]`\n"
         f"Total messages: {stats['message_count']}",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        do_quote=False
     )
 
 async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -35,7 +37,10 @@ async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     leaderboard = leveling_service.get_leaderboard(chat_id, limit=10)
 
     if not leaderboard:
-        await update.message.reply_text("No one has earned EXP yet!")
+        await update.message.reply_text(
+            "No one has earned EXP yet!",
+            do_quote=False                               
+        )
         return
 
     medals = ["🥇", "🥈", "🥉"]
@@ -50,7 +55,8 @@ async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "\n".join(lines),
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        do_quote=False
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,6 +66,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/level — Check your level and EXP\n"
         "/rank — Group leaderboard\n"
         "/help — This message",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        do_quote=False
     )
 
