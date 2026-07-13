@@ -25,7 +25,7 @@ async def level_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📊 *{stats['username']}*\n\n"
         f"Level: *{stats['level']}*\n"
         f"EXP: {into_curr_level}/{curr_level_exp}\n"
-        f"[{bar}]\n"
+        f"`[{bar}]`\n"
         f"Total messages: {stats['message_count']}",
         parse_mode="Markdown"
     )
