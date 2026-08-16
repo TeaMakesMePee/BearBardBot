@@ -1,4 +1,5 @@
 import logging
+from app.services.heartbeat import send_heartbeat
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters
 )
@@ -20,12 +21,17 @@ logger = logging.getLogger(__name__)
 async def error_handler(update, context):
     logger.error(f"Update caused error: {context.error}")
 
+async def heartbeat_job(context):
+    send_heartbeat()
+
 def main():
     logger.info("Initializing database...")
     init_db()
 
     logger.info("Starting bot in polling mode...")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.job_queue.run_repeating(heartbeat_job, interval=60, first=10)
 
     app.add_handler(CommandHandler("level", level_command))
     app.add_handler(CommandHandler("rank", rank_command))
