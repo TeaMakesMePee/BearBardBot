@@ -6,3 +6,4 @@ venv/
 *.log
 bearbard-backup.sql
 *.sql.backup
+bearbard-backup.sql
