@@ -8,6 +8,13 @@ services:
     networks:
       - botnet
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-southeast-1
+        awslogs-group: bearbard-bot-logs
+        awslogs-create-group: "true"
+        awslogs-stream: bot
 
   postgres:
     image: postgres:16-alpine
@@ -20,6 +27,13 @@ services:
     networks:
       - botnet
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-southeast-1
+        awslogs-group: bearbard-postgres-logs
+        awslogs-create-group: "true"
+        awslogs-stream: postgres
 
 networks:
   botnet:
