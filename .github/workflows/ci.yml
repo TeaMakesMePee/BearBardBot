@@ -28,5 +28,5 @@ jobs:
         run: |
           python -c "import app.config" || echo "config needs env vars, skipping"
           python -m py_compile main.py
-          find app -name "*.py -exec python -m py_compile {} \;
+          find app -name "*.py" -exec python -m py_compile {} \;
 
