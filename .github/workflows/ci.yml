@@ -24,9 +24,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check code imports cleanly
-        run: |
-          python -c "import app.config" || echo "config needs env vars, skipping"
-          python -m py_compile main.py
-          find app -name "*.py" -exec python -m py_compile {} \;
+      - name: Run tests
+        run: python -m pytest tests/ -v
 
