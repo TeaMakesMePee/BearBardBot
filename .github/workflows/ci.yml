@@ -40,7 +40,14 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/BearBardBot
+            git rev-parse HEAD > ~/last_good_commit.txt
             git pull origin main
             docker-compose up -d --build
-            sleep 10
+            sleep 15
+            if ! docker-compose ps | grep -q "Up"; then
+              echo "Deploy failed, rolling back!"
+              git checkout $(cat ~/last_good_commit.txt)
+              docker-compose up -d --build
+              exit 1
+            fi
             docker-compose ps
