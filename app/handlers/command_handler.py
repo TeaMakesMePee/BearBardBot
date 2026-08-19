@@ -61,7 +61,7 @@ async def rank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📈 *Leveling Bot*\n\n"
+        "📈 *Bear Bard Bot*\n\n"
         "Activity in the group chat earns you EXP!\n\n"
         "/level — Check your level and EXP\n"
         "/rank — Group leaderboard\n",
