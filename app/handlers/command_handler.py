@@ -64,8 +64,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📈 *Leveling Bot*\n\n"
         "Activity in the group chat earns you EXP!\n\n"
         "/level — Check your level and EXP\n"
-        "/rank — Group leaderboard\n"
-        "/help — This message",
+        "/rank — Group leaderboard\n",
         parse_mode="Markdown",
         do_quote=False
     )
