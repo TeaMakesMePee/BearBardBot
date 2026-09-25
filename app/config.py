@@ -8,7 +8,7 @@ load_dotenv()
 def get_secret(param_name: str, env_fallback: str) -> str:
     try:
         import boto3
-        ssm = boto3.client("ssm", region_name"ap-southeast-1")
+        ssm = boto3.client("ssm", region_name="ap-southeast-1")
         response = ssm.get_parameter(Name=param_name, WithDecryption=True)
         return response["Parameter"]["Value"]
     except Exception as e:
