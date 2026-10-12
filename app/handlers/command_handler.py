@@ -1,3 +1,5 @@
+import logging
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -6,6 +8,7 @@ from app.services.achievements import ACHIEVEMENTS
 from app.services.leveling_service import LevelingService
 from app.services.profile_image import render_profile_image
 
+logger = logging.getLogger(__name__)
 leveling_service = LevelingService()
 
 PROFILE_SELF_DESTRUCT_SECONDS = 60
@@ -51,7 +54,7 @@ async def delete_profile_photo(context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
     except Exception:
-        pass
+        logger.exception(f"Failed to self-destruct profile photo {message_id} in chat {chat_id}")
 
 
 async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
