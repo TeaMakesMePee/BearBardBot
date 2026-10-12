@@ -2,7 +2,7 @@ import io
 import os
 
 import cairosvg
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from app.services.leveling_math import user_progress
 from app.services.achievements import ACHIEVEMENTS
@@ -18,7 +18,7 @@ ACCENT_COLOR = (245, 185, 66)
 TEXT_COLOR = (235, 235, 240)
 MUTED_COLOR = (150, 152, 165)
 BAR_BG_COLOR = (45, 47, 60)
-NEON_BLUE = (56, 220, 255)
+EXP_BLUE = (41, 128, 255)
 CELL_EMPTY_COLOR = (38, 41, 54)
 BAR_CELLS = 20
 BAR_CELL_GAP = 4 * SCALE
@@ -74,23 +74,12 @@ def _draw_battery_exp_bar(img: Image.Image, x: int, y: int, w: int, h: int, frac
     filled_cells = round(BAR_CELLS * fraction)
 
     cell_w = (w - BAR_CELL_GAP * (BAR_CELLS - 1)) / BAR_CELLS
-
-    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow)
-
     draw = ImageDraw.Draw(img)
 
     for i in range(BAR_CELLS):
         cx = x + i * (cell_w + BAR_CELL_GAP)
-        if i < filled_cells:
-            glow_draw.rectangle([cx, y, cx + cell_w, y + h], fill=(*NEON_BLUE, 255))
-        else:
-            draw.rectangle([cx, y, cx + cell_w, y + h], fill=CELL_EMPTY_COLOR)
-
-    if filled_cells > 0:
-        blurred = glow.filter(ImageFilter.GaussianBlur(radius=4 * SCALE))
-        img.paste(Image.alpha_composite(img.convert("RGBA"), blurred).convert("RGB"), (0, 0))
-        img.paste(glow, (0, 0), glow)
+        color = EXP_BLUE if i < filled_cells else CELL_EMPTY_COLOR
+        draw.rectangle([cx, y, cx + cell_w, y + h], fill=color)
 
 
 def render_profile_image(
@@ -120,7 +109,7 @@ def render_profile_image(
             avatar_pos[0] - outline_w // 2, avatar_pos[1] - outline_w // 2,
             avatar_pos[0] + AVATAR_SIZE + outline_w // 2, avatar_pos[1] + AVATAR_SIZE + outline_w // 2,
         ],
-        outline=NEON_BLUE, width=outline_w,
+        outline=EXP_BLUE, width=outline_w,
     )
 
     name_font = _load_font(30 * SCALE, bold=True)
