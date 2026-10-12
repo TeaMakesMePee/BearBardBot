@@ -178,6 +178,18 @@ def unlock_achievement(user_id: int, chat_id: int, key: str) -> None:
     finally:
         conn.close()
 
+def get_user_by_username(chat_id: int, username: str) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM user_levels WHERE chat_id = %s AND LOWER(username) = LOWER(%s)",
+                (chat_id, username)
+            )
+            return cur.fetchone()
+    finally:
+        conn.close()
+
 def get_all_users() -> list[dict]:
     conn = get_connection()
     try:
