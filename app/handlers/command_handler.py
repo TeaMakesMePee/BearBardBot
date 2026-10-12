@@ -14,8 +14,8 @@ leveling_service = LevelingService()
 PROFILE_SELF_DESTRUCT_SECONDS = 60
 
 
-def _resolve_profile_target(update: Update):
-    """Returns (user_id, display_name) or None.
+def _resolve_profile_target_id(update: Update) -> int | None:
+    """Returns the target user_id, or None.
 
     reply-to and @mentions of usernameless users give us a full User object
     directly from Telegram. A plain @username mention only gives us text
@@ -25,20 +25,28 @@ def _resolve_profile_target(update: Update):
     message = update.message
 
     if message.reply_to_message is not None:
-        user = message.reply_to_message.from_user
-        return user.id, user.full_name
+        return message.reply_to_message.from_user.id
 
     entities = message.parse_entities(types=["mention", "text_mention"])
     for entity, text in entities.items():
         if entity.type == "text_mention":
-            return entity.user.id, entity.user.full_name
+            return entity.user.id
         if entity.type == "mention":
             username = text.lstrip("@")
             row = get_user_by_username(update.effective_chat.id, username)
             if row is not None:
-                return row["user_id"], row["username"] or username
+                return row["user_id"]
 
     return None
+
+
+async def _get_display_name(context: ContextTypes.DEFAULT_TYPE, user_id: int, fallback: str) -> str:
+    try:
+        chat = await context.bot.get_chat(user_id)
+        name = " ".join(filter(None, [chat.first_name, chat.last_name]))
+        return name or fallback
+    except Exception:
+        return fallback
 
 
 async def _get_avatar_bytes(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> bytes | None:
@@ -58,9 +66,9 @@ async def delete_profile_photo(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    target = _resolve_profile_target(update)
+    target_user_id = _resolve_profile_target_id(update)
 
-    if target is None:
+    if target_user_id is None:
         await update.message.reply_text(
             "Reply to someone's message with /profile, or @mention them, to view their profile.\n"
             "(@username mentions only work for members who've already sent a message in this chat.)",
@@ -68,9 +76,11 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    target_user_id, display_name = target
     chat_id = update.effective_chat.id
     stats = leveling_service.get_user_stats(target_user_id, chat_id)
+    display_name = await _get_display_name(
+        context, target_user_id, fallback=(stats["username"] if stats else "This user")
+    )
 
     if stats is None:
         await update.message.reply_text(
