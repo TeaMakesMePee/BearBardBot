@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+
 from app.services.heartbeat import send_heartbeat
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters
@@ -8,8 +10,9 @@ from app.config import BOT_TOKEN
 from app.database.db import init_db
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
-    level_command, rank_command, help_command
+    level_command, rank_command, help_command, profile_command
 )
+from app.services.achievement_service import AchievementService
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -28,6 +31,10 @@ def main():
     logger.info("Initializing database...")
     init_db()
 
+    logger.info("Backfilling achievements for existing users...")
+    unlocked_count = AchievementService().backfill_all(datetime.now())
+    logger.info(f"Backfill complete, {unlocked_count} achievements retroactively unlocked.")
+
     logger.info("Starting bot in polling mode...")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -36,6 +43,7 @@ def main():
     app.add_handler(CommandHandler("level", level_command))
     app.add_handler(CommandHandler("rank", rank_command))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("profile", profile_command))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
                                    handle_message))

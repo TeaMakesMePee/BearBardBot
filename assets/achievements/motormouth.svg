@@ -1,0 +1,21 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g_motormouth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#26C6DA"/>
+      <stop offset="100%" stop-color="#006064"/>
+    </linearGradient>
+    <radialGradient id="glow_motormouth" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#26C6DA" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#26C6DA" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="45" fill="#1C1E27"/>
+  <circle cx="48" cy="48" r="45" fill="url(#glow_motormouth)"/>
+  <circle cx="48" cy="48" r="38" fill="url(#g_motormouth)"/>
+  <circle cx="48" cy="48" r="38" fill="none" stroke="#006064" stroke-width="2" stroke-opacity="0.6"/>
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-opacity="0.9"/>
+  
+      <path d="M26 50c0-13 10-22 22-22s22 9 22 22-10 22-22 22c-3.5 0-7-0.8-10-2.2l-10 4.6 3.4-10C28.6 60 26 55.3 26 50z" fill="#FFFFFF"/>
+      <path d="M38 48h20M38 54h14" stroke="#1C1E27" stroke-width="3" stroke-linecap="round"/>
+    
+</svg>

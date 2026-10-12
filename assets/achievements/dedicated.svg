@@ -1,0 +1,23 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g_dedicated" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66BB6A"/>
+      <stop offset="100%" stop-color="#004D22"/>
+    </linearGradient>
+    <radialGradient id="glow_dedicated" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#66BB6A" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#66BB6A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="45" fill="#1C1E27"/>
+  <circle cx="48" cy="48" r="45" fill="url(#glow_dedicated)"/>
+  <circle cx="48" cy="48" r="38" fill="url(#g_dedicated)"/>
+  <circle cx="48" cy="48" r="38" fill="none" stroke="#004D22" stroke-width="2" stroke-opacity="0.6"/>
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#66BB6A" stroke-width="2.5" stroke-opacity="0.9"/>
+  
+      <rect x="27" y="29" width="42" height="36" rx="5" fill="#FFFFFF"/>
+      <rect x="27" y="29" width="42" height="10" rx="5" fill="#1C1E27" opacity="0.25"/>
+      <circle cx="37" cy="50" r="3" fill="#1C1E27"/><circle cx="48" cy="50" r="3" fill="#1C1E27"/><circle cx="59" cy="50" r="3" fill="#1C1E27"/>
+      <circle cx="37" cy="59" r="3" fill="#1C1E27"/><circle cx="48" cy="59" r="3" fill="#1C1E27"/><circle cx="59" cy="59" r="3" fill="#1C1E27"/>
+    
+</svg>

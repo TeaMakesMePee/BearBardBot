@@ -1,0 +1,21 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g_early_bird" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF176"/>
+      <stop offset="100%" stop-color="#F9A825"/>
+    </linearGradient>
+    <radialGradient id="glow_early_bird" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFF176" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFF176" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="45" fill="#1C1E27"/>
+  <circle cx="48" cy="48" r="45" fill="url(#glow_early_bird)"/>
+  <circle cx="48" cy="48" r="38" fill="url(#g_early_bird)"/>
+  <circle cx="48" cy="48" r="38" fill="none" stroke="#F9A825" stroke-width="2" stroke-opacity="0.6"/>
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#FFF176" stroke-width="2.5" stroke-opacity="0.9"/>
+  
+      <path d="M26 56c2-16 15-26 29-24-2 3-4 6-3 10 9-3 16 2 19 9-7-3-12-1-15 3 5 2 8 7 7 12-12-8-28-5-37 3-3-5-2-9 0-13z" fill="#FFFFFF"/>
+      <circle cx="60" cy="40" r="2.4" fill="#1C1E27"/>
+    
+</svg>

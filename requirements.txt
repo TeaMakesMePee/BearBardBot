@@ -9,3 +9,5 @@ python-dotenv==1.2.2
 python-telegram-bot[job-queue]==22.8
 boto3
 pytest
+Pillow
+CairoSVG
