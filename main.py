@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from app.services.heartbeat import send_heartbeat
+from telegram import BotCommand
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters
 )
@@ -29,6 +30,15 @@ async def error_handler(update, context):
 async def heartbeat_job(context):
     send_heartbeat()
 
+async def post_init(app):
+    await app.bot.set_my_commands([
+        BotCommand("level", "Check your level and EXP"),
+        BotCommand("rank", "Group leaderboard"),
+        BotCommand("profile", "View a member's profile card (reply or @mention)"),
+        BotCommand("achievements", "List every achievement"),
+        BotCommand("help", "Show commands"),
+    ])
+
 def main():
     logger.info("Initializing database...")
     init_db()
@@ -41,7 +51,7 @@ def main():
     logger.info(f"Backfill complete, {unlocked_count} achievements retroactively unlocked.")
 
     logger.info("Starting bot in polling mode...")
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
     app.job_queue.run_repeating(heartbeat_job, interval=60, first=10)
 
