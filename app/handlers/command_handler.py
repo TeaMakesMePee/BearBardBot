@@ -7,7 +7,7 @@ from app.services.profile_image import render_profile_image
 
 leveling_service = LevelingService()
 
-PROFILE_SELF_DESTRUCT_SECONDS = 600
+PROFILE_SELF_DESTRUCT_SECONDS = 60
 
 
 def _resolve_profile_target(update: Update):
