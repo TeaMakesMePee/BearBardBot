@@ -130,6 +130,26 @@ def get_chat_join_rank(user_id: int, chat_id: int) -> int:
     finally:
         conn.close()
 
+def sync_achievement_definitions(achievements: list) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            for a in achievements:
+                cur.execute(
+                    """
+                    INSERT INTO achievements (key, name, description, icon_path)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (key) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        description = EXCLUDED.description,
+                        icon_path = EXCLUDED.icon_path
+                    """,
+                    (a.key, a.name, a.description, a.icon_path)
+                )
+        conn.commit()
+    finally:
+        conn.close()
+
 def get_unlocked_achievements(user_id: int, chat_id: int) -> set[str]:
     conn = get_connection()
     try:

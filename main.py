@@ -8,10 +8,12 @@ from telegram.ext import (
 
 from app.config import BOT_TOKEN
 from app.database.db import init_db
+from app.database.models import sync_achievement_definitions
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
     level_command, rank_command, help_command, profile_command
 )
+from app.services.achievements import ACHIEVEMENTS
 from app.services.achievement_service import AchievementService
 
 logging.basicConfig(
@@ -30,6 +32,9 @@ async def heartbeat_job(context):
 def main():
     logger.info("Initializing database...")
     init_db()
+
+    logger.info("Syncing achievement definitions...")
+    sync_achievement_definitions(ACHIEVEMENTS)
 
     logger.info("Backfilling achievements for existing users...")
     unlocked_count = AchievementService().backfill_all(datetime.now())
