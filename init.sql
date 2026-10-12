@@ -38,3 +38,8 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     unlocked_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (user_id, chat_id, achievement_key)
 );
+
+CREATE TABLE IF NOT EXISTS bot_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);

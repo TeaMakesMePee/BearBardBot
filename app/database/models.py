@@ -1,6 +1,40 @@
 from datetime import date, datetime
 from app.database.db import get_connection
 
+def get_meta(key: str) -> str | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT value FROM bot_meta WHERE key = %s", (key,))
+            row = cur.fetchone()
+            return row["value"] if row else None
+    finally:
+        conn.close()
+
+def set_meta(key: str, value: str) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO bot_meta (key, value) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                """,
+                (key, value)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_known_chat_ids() -> list[int]:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT chat_id FROM user_levels")
+            return [row["chat_id"] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
 def get_user(user_id: int, chat_id: int) -> dict | None:
     conn = get_connection()
     try:

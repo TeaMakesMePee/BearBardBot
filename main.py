@@ -9,7 +9,8 @@ from telegram.ext import (
 
 from app.config import BOT_TOKEN
 from app.database.db import init_db
-from app.database.models import sync_achievement_definitions
+from app.database.models import sync_achievement_definitions, get_meta, set_meta, get_known_chat_ids
+from app.version import VERSION, RELEASE_NOTES
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
     level_command, rank_command, help_command, profile_command, achievements_command
@@ -38,6 +39,21 @@ async def post_init(app):
         BotCommand("achievements", "List every achievement"),
         BotCommand("help", "Show commands"),
     ])
+
+    last_broadcast_version = get_meta("last_broadcast_version")
+    if last_broadcast_version == VERSION:
+        return
+
+    logger.info(f"Broadcasting update notice for v{VERSION}...")
+    message = f"🐻 *BearBardBot updated to v{VERSION}*\n\n{RELEASE_NOTES}"
+
+    for chat_id in get_known_chat_ids():
+        try:
+            await app.bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
+        except Exception:
+            logger.exception(f"Failed to broadcast update notice to chat {chat_id}")
+
+    set_meta("last_broadcast_version", VERSION)
 
 def main():
     logger.info("Initializing database...")
