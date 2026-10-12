@@ -10,7 +10,7 @@ from telegram.ext import (
 from app.config import BOT_TOKEN
 from app.database.db import init_db
 from app.database.models import sync_achievement_definitions, get_meta, set_meta, get_known_chat_ids
-from app.version import VERSION, RELEASE_NOTES
+from app.version import VERSION, RELEASE_NOTES, ANNOUNCE
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
     level_command, rank_command, help_command, profile_command, achievements_command
@@ -40,8 +40,13 @@ async def post_init(app):
         BotCommand("help", "Show commands"),
     ])
 
-    last_broadcast_version = get_meta("last_broadcast_version")
-    if last_broadcast_version == VERSION:
+    last_seen_version = get_meta("last_broadcast_version")
+    if last_seen_version == VERSION:
+        return
+
+    if not ANNOUNCE:
+        logger.info(f"v{VERSION} marked as not announce-worthy, skipping broadcast.")
+        set_meta("last_broadcast_version", VERSION)
         return
 
     logger.info(f"Broadcasting update notice for v{VERSION}...")
