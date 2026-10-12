@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.database.models import get_unlocked_achievements, get_user_by_username
+from app.services.achievements import ACHIEVEMENTS
 from app.services.leveling_service import LevelingService
 from app.services.profile_image import render_profile_image
 
@@ -155,7 +156,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Activity in the group chat earns you EXP!\n\n"
         "/level — Check your level and EXP\n"
         "/rank — Group leaderboard\n"
-        "/profile (reply or @mention) — View a member's profile card\n",
+        "/profile (reply or @mention) — View a member's profile card\n"
+        "/achievements — List every achievement\n",
+        parse_mode="Markdown",
+        do_quote=False
+    )
+
+async def achievements_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lines = ["🏅 *Achievements*\n"]
+    for achievement in ACHIEVEMENTS:
+        lines.append(
+            f"*{achievement.name}* (+{achievement.exp_reward} EXP)\n{achievement.description}"
+        )
+
+    await update.message.reply_text(
+        "\n\n".join(lines),
         parse_mode="Markdown",
         do_quote=False
     )

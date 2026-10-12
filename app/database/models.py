@@ -36,6 +36,18 @@ def upsert_user_exp(user_id: int, chat_id: int, username: str, new_exp: int, new
     finally:
         conn.close()
 
+def set_exp_and_level(user_id: int, chat_id: int, new_exp: int, new_level: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE user_levels SET exp = %s, level = %s WHERE user_id = %s AND chat_id = %s",
+                (new_exp, new_level, user_id, chat_id)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
 def record_active_day(user_id: int, chat_id: int, active_date: date) -> None:
     conn = get_connection()
     try:

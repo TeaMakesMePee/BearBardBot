@@ -37,7 +37,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     for achievement in newly_unlocked:
+        bonus_level_up = leveling_service.award_bonus_exp(
+            user_id, chat_id, username, achievement.exp_reward
+        )
+
         await update.message.reply_text(
-            f"🏅 *{username}* unlocked an achievement!\n*{achievement.name}* — {achievement.description}",
+            f"🏅 *{username}* unlocked an achievement!\n"
+            f"*{achievement.name}* — {achievement.description}\n"
+            f"+{achievement.exp_reward} EXP",
             parse_mode="Markdown"
         )
+
+        if bonus_level_up:
+            await update.message.reply_text(
+                f"🎉 *{bonus_level_up['username']}* leveled up!\n"
+                f"Level {bonus_level_up['old_level']} → *Level {bonus_level_up['new_level']}*",
+                parse_mode="Markdown"
+            )

@@ -11,7 +11,7 @@ from app.database.db import init_db
 from app.database.models import sync_achievement_definitions
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
-    level_command, rank_command, help_command, profile_command
+    level_command, rank_command, help_command, profile_command, achievements_command
 )
 from app.services.achievements import ACHIEVEMENTS
 from app.services.achievement_service import AchievementService
@@ -49,6 +49,7 @@ def main():
     app.add_handler(CommandHandler("rank", rank_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("profile", profile_command))
+    app.add_handler(CommandHandler("achievements", achievements_command))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
                                    handle_message))

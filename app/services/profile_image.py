@@ -29,6 +29,11 @@ ICON_COLS = 5
 ICON_GAP = 18 * SCALE
 ICON_GRID_TOP = 220 * SCALE
 MARGIN = 40 * SCALE
+LABEL_FONT_SIZE = 11 * SCALE
+LABEL_LINE_HEIGHT = 14 * SCALE
+LABEL_MAX_LINES = 2
+LABEL_GAP = 6 * SCALE
+CELL_HEIGHT = ICON_SIZE + LABEL_GAP + LABEL_LINE_HEIGHT * LABEL_MAX_LINES
 
 
 def _load_font(size: int, bold: bool = False):
@@ -55,6 +60,37 @@ def _render_icon(icon_path: str, unlocked: bool, size: int = ICON_SIZE) -> Image
         faded = Image.merge("RGBA", (r, g, b, a))
         return faded
     return icon
+
+
+def _wrap_label(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+    words = text.split()
+    lines = []
+    current = ""
+
+    for i, word in enumerate(words):
+        candidate = f"{current} {word}".strip()
+        if font.getlength(candidate) <= max_width or not current:
+            current = candidate
+            continue
+
+        lines.append(current)
+        current = word
+        if len(lines) == LABEL_MAX_LINES:
+            current = " ".join(words[i:])
+            break
+
+    if current and len(lines) < LABEL_MAX_LINES:
+        lines.append(current)
+    elif current:
+        lines[-1] = current
+
+    if lines and font.getlength(lines[-1]) > max_width:
+        last = lines[-1]
+        while last and font.getlength(last + "…") > max_width:
+            last = last[:-1]
+        lines[-1] = last + "…"
+
+    return lines[:LABEL_MAX_LINES]
 
 
 def _square_avatar(avatar_bytes: bytes | None, size: int) -> Image.Image:
@@ -95,7 +131,7 @@ def render_profile_image(
     level_span = into_level + progress["to_level"]
 
     rows = -(-len(ACHIEVEMENTS) // ICON_COLS)
-    height = ICON_GRID_TOP + rows * (ICON_SIZE + ICON_GAP) + ICON_GAP
+    height = ICON_GRID_TOP + rows * (CELL_HEIGHT + ICON_GAP) + ICON_GAP
 
     img = Image.new("RGB", (WIDTH, height), BG_COLOR)
     draw = ImageDraw.Draw(img)
@@ -132,14 +168,27 @@ def render_profile_image(
 
     grid_width = ICON_COLS * ICON_SIZE + (ICON_COLS - 1) * ICON_GAP
     grid_x = (WIDTH - grid_width) // 2
+    label_font = _load_font(LABEL_FONT_SIZE)
 
     for idx, achievement in enumerate(ACHIEVEMENTS):
         col = idx % ICON_COLS
         row = idx // ICON_COLS
+        unlocked = achievement.key in unlocked_keys
         x = grid_x + col * (ICON_SIZE + ICON_GAP)
-        y = ICON_GRID_TOP + row * (ICON_SIZE + ICON_GAP)
-        icon = _render_icon(achievement.icon_path, achievement.key in unlocked_keys)
+        y = ICON_GRID_TOP + row * (CELL_HEIGHT + ICON_GAP)
+
+        icon = _render_icon(achievement.icon_path, unlocked)
         img.paste(icon, (x, y), icon)
+
+        label_lines = _wrap_label(achievement.name, label_font, ICON_SIZE)
+        label_color = TEXT_COLOR if unlocked else MUTED_COLOR
+        label_y = y + ICON_SIZE + LABEL_GAP
+        for line in label_lines:
+            draw.text(
+                (x + ICON_SIZE / 2, label_y), line,
+                font=label_font, fill=label_color, anchor="ma",
+            )
+            label_y += LABEL_LINE_HEIGHT
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
