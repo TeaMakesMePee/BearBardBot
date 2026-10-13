@@ -262,19 +262,10 @@ def sync_superlative_questions(texts: list[str]) -> None:
     finally:
         conn.close()
 
-def add_superlative_question(text: str, submitted_by: int) -> None:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO superlative_questions (text, submitted_by) VALUES (%s, %s)",
-                (text, submitted_by)
-            )
-        conn.commit()
-    finally:
-        conn.close()
-
-def get_next_superlative_question(chat_id: int, recent_limit: int = 10) -> dict | None:
+def get_next_superlative_question(chat_id: int, recent_limit: int = 10_000) -> dict | None:
+    """recent_limit effectively unbounded so each chat cycles through its
+    whole active question bank before any repeat -- independent per chat
+    since the exclusion subquery is scoped to this chat_id."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -361,9 +352,22 @@ def get_active_superlative_games() -> list[int]:
     finally:
         conn.close()
 
+def ensure_superlative_game_row(chat_id: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO superlative_games (chat_id, active) VALUES (%s, FALSE) ON CONFLICT (chat_id) DO NOTHING",
+                (chat_id,)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
 def create_superlative_round(
-    chat_id: int, question_id: int, poll_message_id: int,
-    option_user_ids: list[int], resolve_at: datetime
+    chat_id: int, poll_message_id: int, poll_id: str,
+    option_user_ids: list[int], resolve_at: datetime,
+    question_id: int | None = None, question_text: str | None = None,
 ) -> int:
     conn = get_connection()
     try:
@@ -371,11 +375,11 @@ def create_superlative_round(
             cur.execute(
                 """
                 INSERT INTO superlative_rounds
-                    (chat_id, question_id, poll_message_id, option_user_ids, resolve_at)
-                VALUES (%s, %s, %s, %s, %s)
+                    (chat_id, question_id, question_text, poll_message_id, poll_id, option_user_ids, resolve_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (chat_id, question_id, poll_message_id, option_user_ids, resolve_at)
+                (chat_id, question_id, question_text, poll_message_id, poll_id, option_user_ids, resolve_at)
             )
             return cur.fetchone()["id"]
     finally:
@@ -387,12 +391,80 @@ def get_superlative_round(round_id: int) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT r.*, q.text AS question_text
+                SELECT r.*, COALESCE(r.question_text, q.text) AS resolved_question_text
                 FROM superlative_rounds r
-                JOIN superlative_questions q ON q.id = r.question_id
+                LEFT JOIN superlative_questions q ON q.id = r.question_id
                 WHERE r.id = %s
                 """,
                 (round_id,)
+            )
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+def get_superlative_round_by_poll_id(poll_id: str) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM superlative_rounds WHERE poll_id = %s AND resolved_at IS NULL",
+                (poll_id,)
+            )
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+def record_superlative_vote(round_id: int, voter_user_id: int, option_index: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO superlative_votes (round_id, voter_user_id, option_index)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (round_id, voter_user_id) DO UPDATE SET option_index = EXCLUDED.option_index
+                """,
+                (round_id, voter_user_id, option_index)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def count_superlative_votes(round_id: int) -> int:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM superlative_votes WHERE round_id = %s", (round_id,))
+            return cur.fetchone()["n"]
+    finally:
+        conn.close()
+
+def get_active_round_count(chat_id: int) -> int:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) AS n FROM superlative_rounds WHERE chat_id = %s AND resolved_at IS NULL",
+                (chat_id,)
+            )
+            return cur.fetchone()["n"]
+    finally:
+        conn.close()
+
+def get_oldest_active_round(chat_id: int) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.*, COALESCE(r.question_text, q.text) AS resolved_question_text
+                FROM superlative_rounds r
+                LEFT JOIN superlative_questions q ON q.id = r.question_id
+                WHERE r.chat_id = %s AND r.resolved_at IS NULL
+                ORDER BY r.created_at ASC
+                LIMIT 1
+                """,
+                (chat_id,)
             )
             return cur.fetchone()
     finally:
@@ -404,11 +476,10 @@ def get_pending_superlative_rounds() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT r.*, q.text AS question_text
+                SELECT r.*, COALESCE(r.question_text, q.text) AS resolved_question_text
                 FROM superlative_rounds r
-                JOIN superlative_questions q ON q.id = r.question_id
-                JOIN superlative_games g ON g.chat_id = r.chat_id
-                WHERE r.resolved_at IS NULL AND g.active = TRUE
+                LEFT JOIN superlative_questions q ON q.id = r.question_id
+                WHERE r.resolved_at IS NULL
                 """
             )
             return cur.fetchall()

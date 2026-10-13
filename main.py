@@ -4,7 +4,7 @@ from datetime import datetime
 from app.services.heartbeat import send_heartbeat
 from telegram import BotCommand
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, filters
+    ApplicationBuilder, CommandHandler, MessageHandler, PollAnswerHandler, filters
 )
 
 from app.config import BOT_TOKEN
@@ -36,6 +36,9 @@ async def error_handler(update, context):
 
 async def heartbeat_job(context):
     send_heartbeat()
+
+async def poll_answer_handler(update, context):
+    await superlative_service.handle_poll_answer(context.bot, context.job_queue, update.poll_answer)
 
 async def post_init(app):
     await app.bot.set_my_commands([
@@ -98,6 +101,7 @@ def main():
     app.add_handler(CommandHandler("profile", profile_command))
     app.add_handler(CommandHandler("achievements", achievements_command))
     app.add_handler(CommandHandler("superlatives", superlatives_command))
+    app.add_handler(PollAnswerHandler(poll_answer_handler))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
                                    handle_message))

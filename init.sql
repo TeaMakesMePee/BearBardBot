@@ -47,8 +47,7 @@ CREATE TABLE IF NOT EXISTS bot_meta (
 CREATE TABLE IF NOT EXISTS superlative_questions (
     id SERIAL PRIMARY KEY,
     text TEXT NOT NULL,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    submitted_by BIGINT
+    active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS superlative_games (
@@ -60,11 +59,20 @@ CREATE TABLE IF NOT EXISTS superlative_games (
 CREATE TABLE IF NOT EXISTS superlative_rounds (
     id SERIAL PRIMARY KEY,
     chat_id BIGINT NOT NULL REFERENCES superlative_games(chat_id),
-    question_id INTEGER NOT NULL REFERENCES superlative_questions(id),
+    question_id INTEGER REFERENCES superlative_questions(id),  -- NULL for one-off /suggest polls
+    question_text TEXT,                                        -- set only for one-off polls (never persisted to superlative_questions)
     poll_message_id BIGINT,
+    poll_id TEXT,
     option_user_ids BIGINT[] NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     resolve_at TIMESTAMP NOT NULL,
     resolved_at TIMESTAMP,
     winner_user_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS superlative_votes (
+    round_id INTEGER NOT NULL REFERENCES superlative_rounds(id),
+    voter_user_id BIGINT NOT NULL,
+    option_index INTEGER NOT NULL,
+    PRIMARY KEY (round_id, voter_user_id)
 );

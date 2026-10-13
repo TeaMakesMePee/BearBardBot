@@ -191,6 +191,9 @@ async def achievements_command(update: Update, context: ContextTypes.DEFAULT_TYP
         do_quote=False
     )
 
+# NOTE: start/stop are manual testing controls -- once rounds run on a fully
+# automated schedule, this command (and /superlatives start/stop) goes away;
+# suggest is expected to stay.
 async def superlatives_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     args = context.args or []
@@ -205,8 +208,11 @@ async def superlatives_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await superlative_service.post_round(context.bot, context.job_queue, chat_id)
 
     elif subcommand == "stop":
-        models.stop_superlative_game(chat_id)
-        await update.message.reply_text("Superlatives stopped for this chat.", do_quote=False)
+        # Cancels the oldest active round only — doesn't deactivate the game or
+        # touch any other concurrently-running rounds.
+        cancelled = await superlative_service.cancel_oldest_round(context.bot, chat_id)
+        if not cancelled:
+            await update.message.reply_text("No active superlative round to stop right now.", do_quote=False)
 
     elif subcommand == "suggest":
         text = " ".join(args[1:]).strip()
@@ -220,15 +226,17 @@ async def superlatives_command(update: Update, context: ContextTypes.DEFAULT_TYP
         if len(text) > 200:
             await update.message.reply_text("That's a bit long — keep it under 200 characters.", do_quote=False)
             return
-        models.add_superlative_question(text, update.effective_user.id)
-        await update.message.reply_text(f"Added: \"Most likely to {text}\" 🎉", do_quote=False)
+        started = await superlative_service.post_round(context.bot, context.job_queue, chat_id, question_text=text)
+        if not started:
+            return
 
     else:
         await update.message.reply_text(
             "📋 *Superlatives*\n\n"
-            "/superlatives start — start the weekly \"Most Likely To\" game\n"
-            "/superlatives stop — stop it\n"
-            "/superlatives suggest <text> — add your own superlative\n",
+            "/superlatives start — start the cycling \"Most Likely To\" game\n"
+            "/superlatives stop — cancel the oldest active round\n"
+            "/superlatives suggest <text> — run a one-off poll for your own superlative\n"
+            f"(max {superlative_service.MAX_CONCURRENT_ROUNDS} rounds running at once)",
             parse_mode="Markdown",
             do_quote=False
         )
