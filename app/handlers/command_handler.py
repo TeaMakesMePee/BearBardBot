@@ -200,12 +200,12 @@ async def superlatives_command(update: Update, context: ContextTypes.DEFAULT_TYP
     subcommand = args[0].lower() if args else ""
 
     if subcommand == "start":
-        if models.is_superlative_game_active(chat_id):
-            await update.message.reply_text("Superlatives is already running in this chat!", do_quote=False)
-            return
+        # No "already running" guard -- concurrency is capped inside post_round
+        # (MAX_CONCURRENT_ROUNDS), not by a single game-active flag.
         models.start_superlative_game(chat_id)
-        await update.message.reply_text("🎉 Superlatives started! First round coming up...", do_quote=False)
-        await superlative_service.post_round(context.bot, context.job_queue, chat_id)
+        started = await superlative_service.post_round(context.bot, context.job_queue, chat_id)
+        if started:
+            await update.message.reply_text("🎉 Superlatives round started!", do_quote=False)
 
     elif subcommand == "stop":
         # Cancels the oldest active round only — doesn't deactivate the game or
