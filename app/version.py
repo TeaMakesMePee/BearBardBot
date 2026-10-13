@@ -5,8 +5,8 @@
 # Keep RELEASE_NOTES high-level and internal-detail-free when ANNOUNCE is True
 # -- it gets broadcast to every group chat the bot is in.
 
-VERSION = "1.1.0"
-ANNOUNCE = True
+VERSION = "1.2.0"
+ANNOUNCE = False  # Superlatives is in testing -- no group broadcast yet
 
 RELEASE_NOTES = (
     "What's new:\n"
