@@ -43,3 +43,28 @@ CREATE TABLE IF NOT EXISTS bot_meta (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS superlative_questions (
+    id SERIAL PRIMARY KEY,
+    text TEXT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    submitted_by BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS superlative_games (
+    chat_id BIGINT PRIMARY KEY,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    started_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS superlative_rounds (
+    id SERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL REFERENCES superlative_games(chat_id),
+    question_id INTEGER NOT NULL REFERENCES superlative_questions(id),
+    poll_message_id BIGINT,
+    option_user_ids BIGINT[] NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    resolve_at TIMESTAMP NOT NULL,
+    resolved_at TIMESTAMP,
+    winner_user_id BIGINT
+);

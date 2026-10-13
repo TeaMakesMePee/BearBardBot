@@ -9,14 +9,20 @@ from telegram.ext import (
 
 from app.config import BOT_TOKEN
 from app.database.db import init_db
-from app.database.models import sync_achievement_definitions, get_meta, set_meta, get_known_chat_ids
+from app.database.models import (
+    sync_achievement_definitions, get_meta, set_meta, get_known_chat_ids,
+    sync_superlative_questions, get_pending_superlative_rounds
+)
 from app.version import VERSION, RELEASE_NOTES, ANNOUNCE
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
-    level_command, rank_command, help_command, profile_command, achievements_command
+    level_command, rank_command, help_command, profile_command, achievements_command,
+    superlatives_command
 )
 from app.services.achievements import ACHIEVEMENTS
 from app.services.achievement_service import AchievementService
+from app.services.superlative_questions import STARTER_QUESTIONS
+from app.services import superlative_service
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -37,8 +43,15 @@ async def post_init(app):
         BotCommand("rank", "Group leaderboard"),
         BotCommand("profile", "View a member's profile card (reply or @mention)"),
         BotCommand("achievements", "List every achievement"),
+        BotCommand("superlatives", "Start/stop/suggest for the \"Most Likely To\" game"),
         BotCommand("help", "Show commands"),
     ])
+
+    logger.info("Reconciling pending superlative rounds...")
+    now = datetime.now()
+    for round_row in get_pending_superlative_rounds():
+        delay = (round_row["resolve_at"] - now).total_seconds()
+        superlative_service.schedule_resolve(app.job_queue, round_row["chat_id"], round_row["id"], delay)
 
     last_seen_version = get_meta("last_broadcast_version")
     if last_seen_version == VERSION:
@@ -71,6 +84,9 @@ def main():
     unlocked_count = AchievementService().backfill_all(datetime.now())
     logger.info(f"Backfill complete, {unlocked_count} achievements retroactively unlocked.")
 
+    logger.info("Syncing superlative questions...")
+    sync_superlative_questions(STARTER_QUESTIONS)
+
     logger.info("Starting bot in polling mode...")
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
@@ -81,6 +97,7 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("profile", profile_command))
     app.add_handler(CommandHandler("achievements", achievements_command))
+    app.add_handler(CommandHandler("superlatives", superlatives_command))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
                                    handle_message))

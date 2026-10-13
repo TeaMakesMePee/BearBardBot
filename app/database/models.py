@@ -245,6 +245,188 @@ def get_all_users() -> list[dict]:
     finally:
         conn.close()
 
+def sync_superlative_questions(texts: list[str]) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            for text in texts:
+                cur.execute(
+                    """
+                    INSERT INTO superlative_questions (text, submitted_by)
+                    SELECT %s, NULL
+                    WHERE NOT EXISTS (SELECT 1 FROM superlative_questions WHERE text = %s)
+                    """,
+                    (text, text)
+                )
+        conn.commit()
+    finally:
+        conn.close()
+
+def add_superlative_question(text: str, submitted_by: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO superlative_questions (text, submitted_by) VALUES (%s, %s)",
+                (text, submitted_by)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_next_superlative_question(chat_id: int, recent_limit: int = 10) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, text FROM superlative_questions
+                WHERE active = TRUE
+                  AND id NOT IN (
+                      SELECT question_id FROM superlative_rounds
+                      WHERE chat_id = %s
+                      ORDER BY created_at DESC
+                      LIMIT %s
+                  )
+                ORDER BY RANDOM()
+                LIMIT 1
+                """,
+                (chat_id, recent_limit)
+            )
+            row = cur.fetchone()
+            if row:
+                return row
+            cur.execute("SELECT id, text FROM superlative_questions WHERE active = TRUE ORDER BY RANDOM() LIMIT 1")
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+def get_active_chat_members(chat_id: int, limit: int = 10) -> list[dict]:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT user_id, username FROM user_levels
+                WHERE chat_id = %s
+                ORDER BY last_message_at DESC
+                LIMIT %s
+                """,
+                (chat_id, limit)
+            )
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+def start_superlative_game(chat_id: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO superlative_games (chat_id, active) VALUES (%s, TRUE)
+                ON CONFLICT (chat_id) DO UPDATE SET active = TRUE
+                """,
+                (chat_id,)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def stop_superlative_game(chat_id: int) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE superlative_games SET active = FALSE WHERE chat_id = %s", (chat_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def is_superlative_game_active(chat_id: int) -> bool:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT active FROM superlative_games WHERE chat_id = %s", (chat_id,))
+            row = cur.fetchone()
+            return bool(row and row["active"])
+    finally:
+        conn.close()
+
+def get_active_superlative_games() -> list[int]:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT chat_id FROM superlative_games WHERE active = TRUE")
+            return [row["chat_id"] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+def create_superlative_round(
+    chat_id: int, question_id: int, poll_message_id: int,
+    option_user_ids: list[int], resolve_at: datetime
+) -> int:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO superlative_rounds
+                    (chat_id, question_id, poll_message_id, option_user_ids, resolve_at)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (chat_id, question_id, poll_message_id, option_user_ids, resolve_at)
+            )
+            return cur.fetchone()["id"]
+    finally:
+        conn.close()
+
+def get_superlative_round(round_id: int) -> dict | None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.*, q.text AS question_text
+                FROM superlative_rounds r
+                JOIN superlative_questions q ON q.id = r.question_id
+                WHERE r.id = %s
+                """,
+                (round_id,)
+            )
+            return cur.fetchone()
+    finally:
+        conn.close()
+
+def get_pending_superlative_rounds() -> list[dict]:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.*, q.text AS question_text
+                FROM superlative_rounds r
+                JOIN superlative_questions q ON q.id = r.question_id
+                JOIN superlative_games g ON g.chat_id = r.chat_id
+                WHERE r.resolved_at IS NULL AND g.active = TRUE
+                """
+            )
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+def resolve_superlative_round(round_id: int, winner_user_id: int | None) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE superlative_rounds SET resolved_at = NOW(), winner_user_id = %s WHERE id = %s",
+                (winner_user_id, round_id)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
 def get_leaderboard(chat_id: int, limit: int = 10) -> list[dict]:
     conn = get_connection()
     try:
