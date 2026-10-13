@@ -252,8 +252,8 @@ def sync_superlative_questions(texts: list[str]) -> None:
             for text in texts:
                 cur.execute(
                     """
-                    INSERT INTO superlative_questions (text, submitted_by)
-                    SELECT %s, NULL
+                    INSERT INTO superlative_questions (text)
+                    SELECT %s
                     WHERE NOT EXISTS (SELECT 1 FROM superlative_questions WHERE text = %s)
                     """,
                     (text, text)
