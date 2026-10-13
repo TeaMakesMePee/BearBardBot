@@ -1,14 +1,16 @@
+import logging
 import random
 from datetime import datetime, timedelta
 
 from app.database import models
 from app.services.leveling_service import LevelingService
 
-POLL_TIMEOUT_SECONDS = 600  # TESTING value — change to 24 * 3600 for production
+POLL_TIMEOUT_SECONDS = 24 * 3600
+ROUND_CADENCE_SECONDS = 7 * 24 * 3600
 MAX_POLL_OPTIONS = 10
 SUPERLATIVE_EXP_REWARD = 20
-MAX_CONCURRENT_ROUNDS = 3
 
+logger = logging.getLogger(__name__)
 leveling_service = LevelingService()
 
 
@@ -26,45 +28,28 @@ def _display_name(member: dict) -> str:
     return member["username"] or str(member["user_id"])
 
 
-async def post_round(bot, job_queue, chat_id: int, question_text: str | None = None) -> bool:
-    """Starts a round. If question_text is given, it's an ad-hoc /suggest poll
-    (never written to superlative_questions). Otherwise picks the next
-    question from the bank, cycling through without repeats."""
+async def post_round(bot, job_queue, chat_id: int) -> bool:
+    """Starts a round for this chat by cycling the next question from the bank.
+    No-ops if this chat already has an active round."""
     models.ensure_superlative_game_row(chat_id)
 
-    if models.get_active_round_count(chat_id) >= MAX_CONCURRENT_ROUNDS:
-        await bot.send_message(
-            chat_id=chat_id,
-            text=f"Already {MAX_CONCURRENT_ROUNDS} superlatives running at once — wait for one to finish first."
-        )
+    if models.get_active_round_count(chat_id) >= 1:
         return False
 
     members = models.get_active_chat_members(chat_id, limit=MAX_POLL_OPTIONS)
     if len(members) < 2:
-        await bot.send_message(
-            chat_id=chat_id,
-            text="Not enough active members yet to run Superlatives — need at least 2 people who've sent a message."
-        )
-        if question_text is None:
-            models.stop_superlative_game(chat_id)
         return False
 
-    question_id = None
-    if question_text is None:
-        question = models.get_next_superlative_question(chat_id)
-        if question is None:
-            await bot.send_message(chat_id=chat_id, text="No superlative questions available right now.")
-            models.stop_superlative_game(chat_id)
-            return False
-        question_id = question["id"]
-        question_text = question["text"]
+    question = models.get_next_superlative_question(chat_id)
+    if question is None:
+        return False
 
     option_names = [_display_name(m) for m in members]
     option_user_ids = [m["user_id"] for m in members]
 
     poll_message = await bot.send_poll(
         chat_id=chat_id,
-        question=f"Most likely to {question_text}?",
+        question=f"Most likely to {question['text']}?",
         options=option_names,
         is_anonymous=True,
     )
@@ -72,7 +57,7 @@ async def post_round(bot, job_queue, chat_id: int, question_text: str | None = N
     resolve_at = datetime.now() + timedelta(seconds=POLL_TIMEOUT_SECONDS)
     round_id = models.create_superlative_round(
         chat_id, poll_message.message_id, poll_message.poll.id, option_user_ids, resolve_at,
-        question_id=question_id, question_text=(question_text if question_id is None else None),
+        question_id=question["id"],
     )
     schedule_resolve(job_queue, chat_id, round_id, POLL_TIMEOUT_SECONDS)
     return True
@@ -105,27 +90,6 @@ async def handle_poll_answer(bot, job_queue, poll_answer) -> None:
 
     if models.count_superlative_votes(round_row["id"]) >= eligible_voters:
         await resolve_round(bot, job_queue, round_row["chat_id"], round_row["id"])
-
-
-async def cancel_oldest_round(bot, chat_id: int) -> bool:
-    """Manually cancels the oldest active round in this chat (no winner, no EXP,
-    doesn't chain into the next round). Testing-only control, slated for removal
-    once rounds run on a fully automated schedule."""
-    round_row = models.get_oldest_active_round(chat_id)
-    if round_row is None:
-        return False
-
-    try:
-        await bot.stop_poll(chat_id=chat_id, message_id=round_row["poll_message_id"])
-    except Exception:
-        pass
-
-    models.resolve_superlative_round(round_row["id"], None)
-    await bot.send_message(
-        chat_id=chat_id,
-        text=f"Cancelled: \"Most likely to {round_row['resolved_question_text']}\""
-    )
-    return True
 
 
 async def resolve_round(bot, job_queue, chat_id: int, round_id: int) -> None:
@@ -168,7 +132,21 @@ async def resolve_round(bot, job_queue, chat_id: int, round_id: int) -> None:
                 text=f"🎉 *{level_up['username']}* leveled up!\nLevel {level_up['old_level']} → *Level {level_up['new_level']}*",
                 parse_mode="Markdown"
             )
+    # Next round for this chat is scheduled by the weekly job, not chained here.
 
-    # Only auto-chain into the next round for the cycling game, not one-off /suggest polls.
-    if round_row["question_id"] is not None and models.is_superlative_game_active(chat_id):
-        await post_round(bot, job_queue, chat_id)
+
+async def run_due_rounds(bot, job_queue) -> bool:
+    """Starts a round for every known chat without an active one.
+    Returns True if at least one round was successfully posted."""
+    posted_any = False
+    for chat_id in models.get_known_chat_ids():
+        try:
+            if await post_round(bot, job_queue, chat_id):
+                posted_any = True
+        except Exception:
+            logger.exception(f"Failed to post weekly superlative round for chat {chat_id}")
+    return posted_any
+
+
+async def weekly_superlative_job(context) -> None:
+    await run_due_rounds(context.bot, context.job_queue)

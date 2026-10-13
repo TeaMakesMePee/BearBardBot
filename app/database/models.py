@@ -309,49 +309,6 @@ def get_active_chat_members(chat_id: int, limit: int = 10) -> list[dict]:
     finally:
         conn.close()
 
-def start_superlative_game(chat_id: int) -> None:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO superlative_games (chat_id, active) VALUES (%s, TRUE)
-                ON CONFLICT (chat_id) DO UPDATE SET active = TRUE
-                """,
-                (chat_id,)
-            )
-        conn.commit()
-    finally:
-        conn.close()
-
-def stop_superlative_game(chat_id: int) -> None:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("UPDATE superlative_games SET active = FALSE WHERE chat_id = %s", (chat_id,))
-        conn.commit()
-    finally:
-        conn.close()
-
-def is_superlative_game_active(chat_id: int) -> bool:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT active FROM superlative_games WHERE chat_id = %s", (chat_id,))
-            row = cur.fetchone()
-            return bool(row and row["active"])
-    finally:
-        conn.close()
-
-def get_active_superlative_games() -> list[int]:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT chat_id FROM superlative_games WHERE active = TRUE")
-            return [row["chat_id"] for row in cur.fetchall()]
-    finally:
-        conn.close()
-
 def ensure_superlative_game_row(chat_id: int) -> None:
     conn = get_connection()
     try:
@@ -450,25 +407,6 @@ def get_active_round_count(chat_id: int) -> int:
                 (chat_id,)
             )
             return cur.fetchone()["n"]
-    finally:
-        conn.close()
-
-def get_oldest_active_round(chat_id: int) -> dict | None:
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT r.*, COALESCE(r.question_text, q.text) AS resolved_question_text
-                FROM superlative_rounds r
-                LEFT JOIN superlative_questions q ON q.id = r.question_id
-                WHERE r.chat_id = %s AND r.resolved_at IS NULL
-                ORDER BY r.created_at ASC
-                LIMIT 1
-                """,
-                (chat_id,)
-            )
-            return cur.fetchone()
     finally:
         conn.close()
 

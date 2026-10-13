@@ -5,12 +5,11 @@
 # Keep RELEASE_NOTES high-level and internal-detail-free when ANNOUNCE is True
 # -- it gets broadcast to every group chat the bot is in.
 
-VERSION = "1.2.0"
-ANNOUNCE = False  # Superlatives is in testing -- no group broadcast yet
+VERSION = "1.3.0"
+ANNOUNCE = True
 
 RELEASE_NOTES = (
     "What's new:\n"
-    "• Member achievements -- unlock badges for activity, milestones, and more\n"
-    "• /profile -- view a member's profile card (reply to their message or @mention them)\n"
-    "• /achievements -- see every achievement and how to unlock it"
+    "• Superlatives -- a weekly \"Most Likely To\" poll! Vote on who in the group "
+    "fits each superlative; the winner earns bonus EXP. Runs automatically every week."
 )

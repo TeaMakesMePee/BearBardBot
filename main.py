@@ -16,8 +16,7 @@ from app.database.models import (
 from app.version import VERSION, RELEASE_NOTES, ANNOUNCE
 from app.handlers.message_handler import handle_message
 from app.handlers.command_handler import (
-    level_command, rank_command, help_command, profile_command, achievements_command,
-    superlatives_command
+    level_command, rank_command, help_command, profile_command, achievements_command
 )
 from app.services.achievements import ACHIEVEMENTS
 from app.services.achievement_service import AchievementService
@@ -46,7 +45,6 @@ async def post_init(app):
         BotCommand("rank", "Group leaderboard"),
         BotCommand("profile", "View a member's profile card (reply or @mention)"),
         BotCommand("achievements", "List every achievement"),
-        BotCommand("superlatives", "Start/stop/suggest for the \"Most Likely To\" game"),
         BotCommand("help", "Show commands"),
     ])
 
@@ -57,12 +55,31 @@ async def post_init(app):
         superlative_service.schedule_resolve(app.job_queue, round_row["chat_id"], round_row["id"], delay)
 
     last_seen_version = get_meta("last_broadcast_version")
-    if last_seen_version == VERSION:
+    is_new_version = last_seen_version != VERSION
+
+    if not is_new_version:
+        app.job_queue.run_repeating(
+            superlative_service.weekly_superlative_job,
+            interval=superlative_service.ROUND_CADENCE_SECONDS,
+            first=superlative_service.ROUND_CADENCE_SECONDS,
+        )
         return
+
+    logger.info("New version detected -- running the first superlative round before deciding whether to broadcast...")
+    first_round_ok = await superlative_service.run_due_rounds(app.bot, app.job_queue)
+    app.job_queue.run_repeating(
+        superlative_service.weekly_superlative_job,
+        interval=superlative_service.ROUND_CADENCE_SECONDS,
+        first=superlative_service.ROUND_CADENCE_SECONDS,
+    )
 
     if not ANNOUNCE:
         logger.info(f"v{VERSION} marked as not announce-worthy, skipping broadcast.")
         set_meta("last_broadcast_version", VERSION)
+        return
+
+    if not first_round_ok:
+        logger.warning("First superlative round didn't succeed -- skipping broadcast, will retry next deploy.")
         return
 
     logger.info(f"Broadcasting update notice for v{VERSION}...")
@@ -100,7 +117,6 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("profile", profile_command))
     app.add_handler(CommandHandler("achievements", achievements_command))
-    app.add_handler(CommandHandler("superlatives", superlatives_command))
     app.add_handler(PollAnswerHandler(poll_answer_handler))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
