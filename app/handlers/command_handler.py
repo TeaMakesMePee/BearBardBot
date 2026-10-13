@@ -3,10 +3,12 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.database import models
 from app.database.models import get_unlocked_achievements, get_user_by_username
 from app.services.achievements import ACHIEVEMENTS
 from app.services.leveling_service import LevelingService
 from app.services.profile_image import render_profile_image
+from app.services import superlative_service
 
 logger = logging.getLogger(__name__)
 leveling_service = LevelingService()
@@ -170,7 +172,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/level — Check your level and EXP\n"
         "/rank — Group leaderboard\n"
         "/profile (reply or @mention) — View a member's profile card\n"
-        "/achievements — List every achievement\n",
+        "/achievements — List every achievement\n"
+        "/superlatives — \"Most Likely To\" group game (start/stop/suggest)\n",
         parse_mode="Markdown",
         do_quote=False
     )
@@ -187,4 +190,54 @@ async def achievements_command(update: Update, context: ContextTypes.DEFAULT_TYP
         parse_mode="Markdown",
         do_quote=False
     )
+
+# NOTE: start/stop are manual testing controls -- once rounds run on a fully
+# automated schedule, this command (and /superlatives start/stop) goes away;
+# suggest is expected to stay.
+async def superlatives_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    args = context.args or []
+    subcommand = args[0].lower() if args else ""
+
+    if subcommand == "start":
+        if models.is_superlative_game_active(chat_id):
+            await update.message.reply_text("Superlatives is already running in this chat!", do_quote=False)
+            return
+        models.start_superlative_game(chat_id)
+        await update.message.reply_text("🎉 Superlatives started! First round coming up...", do_quote=False)
+        await superlative_service.post_round(context.bot, context.job_queue, chat_id)
+
+    elif subcommand == "stop":
+        # Cancels the oldest active round only — doesn't deactivate the game or
+        # touch any other concurrently-running rounds.
+        cancelled = await superlative_service.cancel_oldest_round(context.bot, chat_id)
+        if not cancelled:
+            await update.message.reply_text("No active superlative round to stop right now.", do_quote=False)
+
+    elif subcommand == "suggest":
+        text = " ".join(args[1:]).strip()
+        if not text:
+            await update.message.reply_text(
+                "Usage: /superlatives suggest <your superlative>\n"
+                "e.g. /superlatives suggest forget their own birthday plans",
+                do_quote=False
+            )
+            return
+        if len(text) > 200:
+            await update.message.reply_text("That's a bit long — keep it under 200 characters.", do_quote=False)
+            return
+        started = await superlative_service.post_round(context.bot, context.job_queue, chat_id, question_text=text)
+        if not started:
+            return
+
+    else:
+        await update.message.reply_text(
+            "📋 *Superlatives*\n\n"
+            "/superlatives start — start the cycling \"Most Likely To\" game\n"
+            "/superlatives stop — cancel the oldest active round\n"
+            "/superlatives suggest <text> — run a one-off poll for your own superlative\n"
+            f"(max {superlative_service.MAX_CONCURRENT_ROUNDS} rounds running at once)",
+            parse_mode="Markdown",
+            do_quote=False
+        )
 
