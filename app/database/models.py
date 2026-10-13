@@ -381,7 +381,9 @@ def create_superlative_round(
                 """,
                 (chat_id, question_id, question_text, poll_message_id, poll_id, option_user_ids, resolve_at)
             )
-            return cur.fetchone()["id"]
+            round_id = cur.fetchone()["id"]
+        conn.commit()
+        return round_id
     finally:
         conn.close()
 
