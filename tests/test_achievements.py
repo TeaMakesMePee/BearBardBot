@@ -8,6 +8,7 @@ def base_ctx(**overrides):
         "message_count": 0,
         "level": 1,
         "now": datetime(2026, 10, 12, 12, 0, 0),
+        "now_local": datetime(2026, 10, 12, 12, 0, 0),
         "chat_rank": None,
         "chat_user_rank_by_join": 99,
         "distinct_active_days": 0,
@@ -49,8 +50,8 @@ def test_early_bird():
 
 
 def test_night_owl():
-    assert ACHIEVEMENTS_BY_KEY["night_owl"].check(base_ctx(now=datetime(2026, 10, 12, 3, 30)))
-    assert not ACHIEVEMENTS_BY_KEY["night_owl"].check(base_ctx(now=datetime(2026, 10, 12, 9, 0)))
+    assert ACHIEVEMENTS_BY_KEY["night_owl"].check(base_ctx(now_local=datetime(2026, 10, 12, 3, 30)))
+    assert not ACHIEVEMENTS_BY_KEY["night_owl"].check(base_ctx(now_local=datetime(2026, 10, 12, 9, 0)))
 
 
 def test_consistency_and_dedicated():

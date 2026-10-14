@@ -72,7 +72,7 @@ ACHIEVEMENTS: list[Achievement] = [
     ),
     Achievement(
         "night_owl", "Night Owl", "Send a message between 2am and 5am.",
-        "assets/achievements/night_owl.svg", 30, lambda ctx: 2 <= ctx["now"].hour < 5,
+        "assets/achievements/night_owl.svg", 30, lambda ctx: 2 <= ctx["now_local"].hour < 5,
     ),
     Achievement(
         "consistency", "Consistency", "Be active on 7 different days.",

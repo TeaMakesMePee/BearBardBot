@@ -27,3 +27,5 @@ POSTGRES_PASSWORD = get_secret("/bearbard/postgres-password", "POSTGRES_PASSWORD
 
 EXP_PER_MESSAGE = 10
 EXP_COOLDOWN_SECONDS = 5
+
+TIMEZONE = os.environ.get("TIMEZONE", "Asia/Singapore")

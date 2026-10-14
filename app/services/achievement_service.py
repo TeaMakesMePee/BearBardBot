@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
+from app.config import TIMEZONE
 from app.database import models
 from app.services.achievements import ACHIEVEMENTS, Achievement
+
+LOCAL_TZ = ZoneInfo(TIMEZONE)
 
 
 class AchievementService:
@@ -9,10 +13,15 @@ class AchievementService:
         first_seen_at = user.get("first_seen_at") if user else now
         already_unlocked = models.get_unlocked_achievements(user_id, chat_id)
 
+        # `now` is naive server/DB time (UTC); convert to the group's local
+        # timezone for checks that care about local time-of-day, like night_owl.
+        now_local = now.replace(tzinfo=timezone.utc).astimezone(LOCAL_TZ)
+
         return {
             "message_count": user["message_count"],
             "level": user["level"],
             "now": now,
+            "now_local": now_local,
             "chat_rank": models.get_chat_rank(user_id, chat_id),
             "chat_user_rank_by_join": models.get_chat_join_rank(user_id, chat_id),
             "distinct_active_days": models.get_distinct_active_days(user_id, chat_id),
